@@ -12,11 +12,8 @@
 <meta property="og:image" content="crests/moonvale.webp">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307060b'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-size='36' font-weight='700' text-anchor='middle' fill='%23d4af37'%3EM%3C/text%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="fonts/fonts.css">
 <style>
-.skip{display:flex;align-items:center;gap:8px;font:600 11px 'Cinzel',Georgia,serif;letter-spacing:.08em;color:rgba(246,236,210,.75);cursor:pointer;user-select:none}
-.skip input{accent-color:var(--gold);width:16px;height:16px;margin:0;cursor:pointer}
 :root{--gold:#d4af37;--cream:#f6ecd2;--a:#d4af37;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -148,6 +145,23 @@ header{max-width:min(96vw,1500px);gap:clamp(10px,1.6vw,24px)}
 .tools{gap:clamp(8px,1.2vw,16px);flex-wrap:wrap}
 .pill{font-size:clamp(13px,1.7vw,21px);padding:clamp(11px,1.6vh,17px) clamp(16px,2.2vw,32px);letter-spacing:.12em;border-width:2px}
 footer{font-size:clamp(12px,1.4vw,18px);padding:clamp(6px,1.2vh,14px) 0}
+/* ---- fit any window without scrolling; centred header ---- */
+header{justify-content:center;flex-wrap:wrap;text-align:center}
+.tools{justify-content:center}
+.screen{overflow-y:visible;max-height:none;min-height:0;gap:clamp(6px,1.6vh,22px);padding:clamp(12px,3vh,40px) clamp(16px,4vw,64px)}
+.eyebrow{font-size:clamp(15px,min(2.4vw,2.8vh),28px)}
+.title{font-size:clamp(24px,min(5vw,6.4vh),62px)}
+.lede{font-size:clamp(15px,min(2.4vw,2.6vh),26px)}
+.hatwrap,.hatwrap.sm{width:min(30vh,52vw,380px)}
+.bubble{min-height:clamp(90px,16vh,200px)}
+.bubble p{font-size:clamp(18px,min(3.2vw,4vh),42px)}
+.crestwrap{width:min(26vh,50vw,300px)}
+.hname{font-size:clamp(30px,min(8vw,9.5vh),100px)}
+.traits{font-size:clamp(11px,min(1.7vw,2.1vh),20px)}
+.verdict{font-size:clamp(15px,min(2.5vw,2.8vh),28px)}
+.cta{padding:clamp(11px,1.8vh,22px) clamp(26px,4vw,56px)}
+.ghost{padding:clamp(10px,1.5vh,18px) clamp(16px,2.2vw,28px)}
+.field{padding:clamp(10px,1.6vh,20px) 20px}
 @media(max-width:480px){.screen{min-height:0;gap:8px}.hname{font-size:clamp(26px,8.2vw,40px);letter-spacing:.06em}.crestwrap{width:min(40vw,26vh,170px)}.traits{font-size:11px;letter-spacing:.14em}.verdict{font-size:17px}.actions{gap:8px;margin-top:4px}header{flex-direction:column;gap:8px}.brand{font-size:15px}.tools{flex-wrap:wrap;justify-content:center;gap:6px}.pill{padding:8px 11px;font-size:11px}}
 </style>
 </head>
@@ -172,8 +186,10 @@ footer{font-size:clamp(12px,1.4vw,18px);padding:clamp(6px,1.2vh,14px) 0}
     <h1 class="title">The Sorting Ceremony</h1>
     <p class="lede">Place the hat upon your head, tell it your name, and let it peer into your mind.</p>
     <input class="field" id="name" maxlength="24" placeholder="Your name, brave soul…" autocomplete="off">
-    <button class="cta" id="go">Put On The Hat</button>
-    <label class="skip"><input type="checkbox" id="skip"> Skip the story, reveal my house directly</label>
+    <div class="actions" style="margin-top:0">
+      <button class="cta" id="go">Put On The Hat</button>
+      <button class="ghost" id="skipBtn" title="Skip the hat's story and reveal the house straight away">Skip Story · Reveal Now</button>
+    </div>
   </section>
 
   <section class="screen" id="s-think">
@@ -190,7 +206,6 @@ footer{font-size:clamp(12px,1.4vw,18px);padding:clamp(6px,1.2vh,14px) 0}
     <p class="traits" id="traits"></p>
     <p class="verdict" id="verdict"></p>
     <div class="actions">
-      <button class="cta" id="add" style="padding:14px 26px;font-size:12px">Add to Story Wall</button>
       <button class="ghost" id="copy">Copy Story Caption</button>
       <button class="ghost" id="next">Next Student</button>
     </div>
@@ -354,10 +369,10 @@ const cleanName = raw => {
     n = n.toLowerCase().replace(/(^|[ \-'])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
   return n || 'Traveller';
 };
-async function begin() {
+async function begin(skip) {
   if (!bag.length) { toast(`All ${TOTAL} students are sorted. Press Reset to start over.`); return; }
   const name = cleanName($('name').value);
-  if ($('skip').checked) {
+  if (skip === true) {
     cur = { name, house: drawHouse() }; added = false;
     if (!musicTouched) music(true);
     reveal(cur.house);
@@ -385,7 +400,7 @@ async function reveal(h) {
   $('hname').textContent = h.name + '!';
   $('traits').textContent = h.traits;
   $('verdict').textContent = h.verdicts[Math.floor(Math.random() * h.verdicts.length)];
-  $('add').disabled = false; $('add').textContent = 'Add to Story Wall';
+  addToWall();
   show('s-res');
   chime(); speak(`${cur.name}… better be… ${h.name}!`, moods.Dramatic, 3000);
 }
@@ -410,20 +425,19 @@ function openWall() {
     : '<div class="empty">No one has been sorted yet. Be the first!</div>';
   $('modal').classList.add('on');
 }
-$('add').onclick = () => {
+function addToWall() {
   if (added || !cur || !cur.house) return;
   added = true;
   wall.unshift({ n: cur.name, h: cur.house.id, t: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
-  save(); $('add').textContent = 'Added ✓'; $('add').disabled = true; toast('Added to the Story Wall');
-};
+  save(); toast('Added to the Story Wall');
+}
 $('copy').onclick = async () => {
   if (!cur || !cur.house) return;
   const t = `The Sorting Hat has spoken: I'm a ${cur.house.name}! ⚡ ${cur.house.traits.replace(/ · /g, ', ')}. Sorted at the ${CLUB} event.`;
   try { await navigator.clipboard.writeText(t); toast('Caption copied'); } catch (e) { toast('Copy not allowed here'); }
 };
-try { $('skip').checked = localStorage.getItem('sorting_skip') === '1'; } catch (e) {}
-$('skip').onchange = () => { try { localStorage.setItem('sorting_skip', $('skip').checked ? '1' : '0'); } catch (e) {} };
-$('go').onclick = begin;
+$('go').onclick = () => begin();
+$('skipBtn').onclick = () => begin(true);
 $('name').addEventListener('keydown', e => { if (e.key === 'Enter') begin(); });
 $('next').onclick = reset;
 $('wallBtn').onclick = openWall;
