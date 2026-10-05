@@ -74,7 +74,7 @@ footer{font:500 11px 'Cinzel',Georgia,serif;letter-spacing:.3em;text-transform:u
 .scroll{width:100%;max-width:480px;max-height:86vh;display:flex;flex-direction:column;border-radius:18px;padding:22px;background:linear-gradient(180deg,#191322,#0a0810);border:1px solid rgba(212,175,55,.5);box-shadow:0 30px 80px #000}
 .scroll h2{font:700 17px 'Cinzel',Georgia,serif;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin:0 0 4px}
 .scroll small{font-style:italic;color:rgba(246,236,210,.65);font-size:15px}
-.tally{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}
+.tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:8px;margin:14px 0}
 .tally div{background:rgba(255,255,255,.04);border:1px solid rgba(212,175,55,.2);border-radius:12px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:4px}
 .tally svg{width:30px}.tally b{font:700 16px 'Cinzel',serif;color:var(--cream)}
 #list{overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:60px;padding-right:4px}
@@ -174,7 +174,7 @@ header{justify-content:center;flex-wrap:wrap;text-align:center}
   <div class="tools">
     <button class="pill" id="mute" aria-label="Toggle voice">Voice on</button>
     <button class="pill" id="music" aria-label="Toggle music">Music off</button>
-    <button class="pill" id="resetBtn" title="Restart the draw: 30 students, 5 per house">Reset · <span id="sortedCnt">0</span>/30</button>
+    <button class="pill" id="resetBtn" title="Restart the draw">Reset · <span id="sortedCnt">0</span>/<span id="totalCnt"></span></button>
     <button class="pill solid" id="wallBtn">Story Wall · <span id="cnt">0</span></button>
   </div>
 </header>
@@ -270,11 +270,13 @@ const houses = [
  {id:'moonvale',name:'Moonvale',glow:'#8fb4ff',traits:'Intuition · Loyalty · Night Vision',
   verdicts:['A quiet howl in the dark, and a pack that will follow it. Moonvale!','Calm, perceptive and fiercely loyal. Moonvale has been waiting for you.','You see what others miss beneath the moonlight. Moonvale it is!']},
  {id:'flamel',name:'Flamel',glow:'#ff7a45',traits:'Rebirth · Brilliance · Fire',
-  verdicts:['A phoenix spirit if ever I saw one. Rise, Flamel!','Bright, daring and impossible to keep down. Flamel suits you.','Your spark could light the whole hall. Welcome to Flamel!']}
+  verdicts:['A phoenix spirit if ever I saw one. Rise, Flamel!','Bright, daring and impossible to keep down. Flamel suits you.','Your spark could light the whole hall. Welcome to Flamel!']},
+ {id:'sunforge',name:'Sunforge',glow:'#f2a93b',traits:'Craft · Grit · Ingenuity',
+  verdicts:['A mind that builds and a will that never bends. Sunforge!','Patient hands, bright ideas, and horns lowered for a challenge. Sunforge it is!','You were made for the forge, where raw ideas become gold. Welcome to Sunforge!']}
 ];
 const crest = h => `<img src="crests/${h.id}.webp" alt="${h.name} crest">`;
 
-/* ---------- Fixed draw: 30 students, 6 houses, exactly 5 each, random order ---------- */
+/* ---------- Fixed draw: houses x PER_HOUSE students, exactly 5 each, random order ---------- */
 const PER_HOUSE = 5, TOTAL = PER_HOUSE * houses.length;
 function freshBag() {
   const b = houses.flatMap(h => Array(PER_HOUSE).fill(h.id));
@@ -283,15 +285,17 @@ function freshBag() {
 }
 const freshOrder = () => { const o = Array.from({length: TOTAL}, (_, i) => i); for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; } return o; };
 let bag, porder;
+const DRAW_VER = houses.length + 'x' + PER_HOUSE;
+try { if (localStorage.getItem('sorting_ver') !== DRAW_VER) { ['sorting_bag','sorting_porder','sorting_wall'].forEach(k => localStorage.removeItem(k)); localStorage.setItem('sorting_ver', DRAW_VER); } } catch (e) {}
 try { bag = JSON.parse(localStorage.getItem('sorting_bag')); porder = JSON.parse(localStorage.getItem('sorting_porder')); } catch (e) {}
 if (!Array.isArray(porder) || porder.length !== TOTAL) porder = freshOrder();
 if (!Array.isArray(bag) || bag.length > TOTAL || bag.some(id => !houses.some(h => h.id === id))) bag = freshBag();
-const saveBag = () => { try { localStorage.setItem('sorting_bag', JSON.stringify(bag)); localStorage.setItem('sorting_porder', JSON.stringify(porder)); } catch (e) {} const f = $('foot'); if (f) f.textContent = `${CLUB} · Sorting Ceremony · ${TOTAL - bag.length}/${TOTAL} sorted`; const sc = $('sortedCnt'); if (sc) sc.textContent = TOTAL - bag.length; };
+const saveBag = () => { try { localStorage.setItem('sorting_bag', JSON.stringify(bag)); localStorage.setItem('sorting_porder', JSON.stringify(porder)); } catch (e) {} const f = $('foot'); if (f) f.textContent = `${CLUB} · Sorting Ceremony · ${TOTAL - bag.length}/${TOTAL} sorted`; const sc = $('sortedCnt'); if (sc) sc.textContent = TOTAL - bag.length; const tc = $('totalCnt'); if (tc) tc.textContent = TOTAL; };
 const drawHouse = () => { const id = bag.pop(); saveBag(); return houses.find(h => h.id === id); };
 
 /* ---------- The Hat's voices: each line has a mood that changes how it speaks ---------- */
 const moods = {Wise:[.8,.85], Dramatic:[.6,.8], Playful:[1.1,1], Mysterious:[.5,.75], Grumpy:[.45,.85], Sleepy:[.7,.65], Excited:[1.2,1.05]};
-const lines = [["Wise", "Hmm, {n}… a restless mind, brave yet careful. Yes, I know just the place for you."], ["Excited", "Ooh, {n}! What a spark you carry. I have not felt one like it in years!"], ["Mysterious", "{n}… I see what you truly want, and what you hide. Interesting, very interesting."], ["Playful", "Well, hello {n}! Sit still now. Let me rummage around up here."], ["Dramatic", "Oh, {n}! Courage and cunning, tangled together. What agony of choice!"], ["Grumpy", "Another one! Stop thinking so loudly, {n}. I am trying to concentrate."], ["Sleepy", "Mmm… oh, hello {n}. I was napping. Now, what have we here?"], ["Wise", "A curious heart, {n}, and a stubborn streak. Yes, that tells me plenty."], ["Excited", "Wait, wait! {n}, you are not like the others. Hold tight, I know where you belong!"], ["Dramatic", "Brilliance, loyalty, fire… {n}, you have a little of everything. Let me think!"], ["Mysterious", "I have sorted a thousand heads, {n}, but yours hums with something strange."], ["Playful", "Ha! {n}, you thought I would not notice that secret. I notice everything."], ["Grumpy", "Hurry? I have been sorting since before your grandparents, {n}. Patience!"], ["Sleepy", "Yes… no… yes. Do not rush me, {n}. I am nearly there."], ["Wise", "{n}, you listen more than you speak. That is rarer than any talent."], ["Excited", "Marvellous! {n}, there is real ambition in here. I can almost taste it!"], ["Dramatic", "Great heavens, {n}! This is the hardest choice I have faced all night."], ["Mysterious", "Shh, {n}. I hear a quiet voice in your head, and it is brave."], ["Playful", "Ooh, {n}, you are fun! Bright ideas and a very mischievous streak."], ["Grumpy", "Hmph. {n}, you fidget far too much. Still… a decent mind in there."], ["Wise", "Kind, clever and a bit proud, {n}. Yes, I begin to see where you fit."], ["Sleepy", "Ahh, {n}… dreams of glory, I see. Let me wake up properly and decide."], ["Excited", "Oh, {n}! I can feel your heart racing. Good. That means you care."], ["Dramatic", "{n}! A bold soul indeed. The hat has not shivered like this in ages."], ["Mysterious", "Ah, {n}… the moon and the flame both pull at you. Curious indeed."], ["Playful", "Now then, {n}, let us see. Wit, yes. Courage, yes. Cheek, definitely!"], ["Grumpy", "Sit up straight, {n}. Hmm… yes, grudgingly, I like what I find."], ["Wise", "Patience and daring, {n}, in nearly equal measure. That is a dangerous mix."], ["Excited", "Splendid, {n}! You have a mind full of ideas. Let me match it to a home!"], ["Dramatic", "Behold, {n}! A future builder, dreamer and troublemaker. I know your house now!"]];
+const lines = [["Wise", "Hmm, {n}… a restless mind, brave yet careful. Yes, I know just the place for you."], ["Excited", "Ooh, {n}! What a spark you carry. I have not felt one like it in years!"], ["Mysterious", "{n}… I see what you truly want, and what you hide. Interesting, very interesting."], ["Playful", "Well, hello {n}! Sit still now. Let me rummage around up here."], ["Dramatic", "Oh, {n}! Courage and cunning, tangled together. What agony of choice!"], ["Grumpy", "Another one! Stop thinking so loudly, {n}. I am trying to concentrate."], ["Sleepy", "Mmm… oh, hello {n}. I was napping. Now, what have we here?"], ["Wise", "A curious heart, {n}, and a stubborn streak. Yes, that tells me plenty."], ["Excited", "Wait, wait! {n}, you are not like the others. Hold tight, I know where you belong!"], ["Dramatic", "Brilliance, loyalty, fire… {n}, you have a little of everything. Let me think!"], ["Mysterious", "I have sorted a thousand heads, {n}, but yours hums with something strange."], ["Playful", "Ha! {n}, you thought I would not notice that secret. I notice everything."], ["Grumpy", "Hurry? I have been sorting since before your grandparents, {n}. Patience!"], ["Sleepy", "Yes… no… yes. Do not rush me, {n}. I am nearly there."], ["Wise", "{n}, you listen more than you speak. That is rarer than any talent."], ["Excited", "Marvellous! {n}, there is real ambition in here. I can almost taste it!"], ["Dramatic", "Great heavens, {n}! This is the hardest choice I have faced all night."], ["Mysterious", "Shh, {n}. I hear a quiet voice in your head, and it is brave."], ["Playful", "Ooh, {n}, you are fun! Bright ideas and a very mischievous streak."], ["Grumpy", "Hmph. {n}, you fidget far too much. Still… a decent mind in there."], ["Wise", "Kind, clever and a bit proud, {n}. Yes, I begin to see where you fit."], ["Sleepy", "Ahh, {n}… dreams of glory, I see. Let me wake up properly and decide."], ["Excited", "Oh, {n}! I can feel your heart racing. Good. That means you care."], ["Dramatic", "{n}! A bold soul indeed. The hat has not shivered like this in ages."], ["Mysterious", "Ah, {n}… the moon and the flame both pull at you. Curious indeed."], ["Playful", "Now then, {n}, let us see. Wit, yes. Courage, yes. Cheek, definitely!"], ["Grumpy", "Sit up straight, {n}. Hmm… yes, grudgingly, I like what I find."], ["Wise", "Patience and daring, {n}, in nearly equal measure. That is a dangerous mix."], ["Excited", "Splendid, {n}! You have a mind full of ideas. Let me match it to a home!"], ["Dramatic", "Behold, {n}! A future builder, dreamer and troublemaker. I know your house now!"], ["Wise", "Steady hands and a hungry mind, {n}. I know exactly where that belongs."], ["Excited", "Oh, {n}! I can feel something being built in here. What a clever spark!"], ["Mysterious", "{n}… there is gold buried in this head, waiting for the right fire."], ["Playful", "Ha, {n}! Everything in here is half taken apart and twice as clever."], ["Dramatic", "Behold, {n}! A builder's heart and a rebel's grin. Where, oh where?"]];
 
 /* ---------- Voice + typing ---------- */
 let muted = false, voices = [], cur = null, added = false;
@@ -378,7 +382,7 @@ async function begin(skip) {
     reveal(cur.house);
     return;
   }
-  const [mood, tpl] = lines[porder[TOTAL - bag.length]];
+  const [mood, tpl] = lines[porder[TOTAL - bag.length] % lines.length];
   const text = tpl.replace(/\{n\}/g, name);
   cur = { name, house: null }; added = false;
   $('go').disabled = true;
@@ -448,9 +452,9 @@ $('resetBtn').onclick = () => {
   if (!confirm(`Reset the count?
 
 This clears all ${TOTAL - bag.length} sorted students from the wall and restarts the draw: ${TOTAL} places, ${PER_HOUSE} per house.`)) return;
-  wall = []; bag = freshBag(); porder = freshOrder(); save(); saveBag(); reset(); toast('Draw reset: 30 fresh places');
+  wall = []; bag = freshBag(); porder = freshOrder(); save(); saveBag(); reset(); toast(`Draw reset: ${TOTAL} fresh places`);
 };
-$('clear').onclick = () => { if (confirm('Clear the wall and restart the draw (30 fresh places, 5 per house)?')) { wall = []; bag = freshBag(); porder = freshOrder(); save(); saveBag(); openWall(); } };
+$('clear').onclick = () => { if (confirm(`Clear the wall and restart the draw (${TOTAL} fresh places, ${PER_HOUSE} per house)?`)) { wall = []; bag = freshBag(); porder = freshOrder(); save(); saveBag(); openWall(); } };
 $('mute').textContent = 'Voice: on';
 $('mute').onclick = () => { vmode = vmode === 'off' ? 'voice' : 'off'; muted = vmode === 'off'; $('mute').textContent = muted ? 'Voice: off' : 'Voice: on'; if ('speechSynthesis' in window) speechSynthesis.cancel(); if (!muted) speak('Good evening, young wizard.', moods.Wise); };
 $('music').onclick = () => { musicTouched = true; music(!musicOn); };
